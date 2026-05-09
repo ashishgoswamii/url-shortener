@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+
+  # ── Your API ─────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: url-shortener-api
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      BASE_URL: http://localhost:3000
+      DB_URL: postgresql://postgres:password@db:5432/urlshortener
+      REDIS_URL: redis://cache:6379
+    depends_on:
+      db:
+        condition: service_healthy   # wait for postgres to be ready
+      cache:
+        condition: service_healthy   # wait for redis to be ready
+    restart: always
+    networks:
+      - app-network
+
+  # ── Postgres ──────────────────────────────────────────
+  db:
+    image: postgres:15-alpine
+    container_name: url-shortener-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: urlshortenerdo
+    ports:
+      - "5432:5432"         # expose for local DB tools (TablePlus etc)
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+  # ── Redis ─────────────────────────────────────────────
+  cache:
+    image: redis:7-alpine
+    container_name: url-shortener-redis
+    ports:
+      - "6379:6379"         # expose for local Redis tools
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  app-network:
+    driver: bridge
