@@ -1,0 +1,53 @@
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: [CI]              # runs after CI completes
+    types: [completed]
+    branches: [main]
+
+jobs:
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
+    environment:
+      name: production           # requires manual approval in GitHub
+
+    steps:
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            echo "🚀 Starting deployment..."
+
+            # Pull latest image
+            docker pull ${{ secrets.DOCKER_USERNAME }}/url-shortener:latest
+
+            # Stop old container gracefully
+            docker stop url-shortener || true
+            docker rm url-shortener || true
+
+            # Start new container
+            docker run -d \
+              --name url-shortener \
+              --restart always \
+              -p 3000:3000 \
+              --env-file /etc/url-shortener/.env \
+              ${{ secrets.DOCKER_USERNAME }}/url-shortener:latest
+
+            # Wait for health check to pass
+            sleep 5
+            curl -f http://localhost:3000/health || exit 1
+
+            # Clean up old images
+            docker image prune -f
+
+            echo "✅ Deployment complete"
+
+      - name: Notify success
+        run: echo "🎉 Deployed ${{ github.sha }} to production"

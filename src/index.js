@@ -30,6 +30,7 @@ app.use(rateLimit({
   message: { error: 'Too many requests, slow down!' }
 }));
 
+
 // Health check — before other routes
 app.get('/health', (req, res) => {
   res.status(200).json({
