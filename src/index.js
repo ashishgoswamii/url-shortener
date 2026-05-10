@@ -1,8 +1,9 @@
 require('dotenv').config();
-const express = require('express');
 const helmet = require('helmet');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
+
+const app = require('./app');
 
 const { initDB } = require('./db/postgres');
 const { getRedis } = require('./db/redis');
@@ -12,7 +13,6 @@ const redirectRoute = require('./routes/redirect');
 const statsRoute = require('./routes/stats');
 const errorHandler = require('./middleware/errorHandler');
 
-const app = express();
 
 // Security headers
 app.use(helmet());

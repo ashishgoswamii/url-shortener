@@ -72,7 +72,7 @@ jest.mock('../db/redis', () => ({
 }));
 
 const request = require('supertest');
-const app = require('../index');
+const app = require('../app');
 
 describe('Health Check', () => {
   it('should return 200 with status ok', async () => {
